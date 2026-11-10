@@ -11,8 +11,8 @@ android {
         applicationId = "com.trustsmotion.swiandroid"
         minSdk = 30
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0-prototype"
+        versionCode = 2
+        versionName = "0.2.0-camera-presence-prototype"
     }
 
     compileOptions {
@@ -28,4 +28,8 @@ android {
 dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.camera:camera-camera2:1.4.2")
+    implementation("androidx.camera:camera-lifecycle:1.4.2")
+    implementation("androidx.camera:camera-view:1.4.2")
+    implementation("com.google.mlkit:face-detection:16.1.7")
 }

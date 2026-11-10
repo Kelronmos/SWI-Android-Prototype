@@ -64,8 +64,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         val button = Button(this).apply {
-            text = "AUTHENTICATE WITH FINGERPRINT"
-            setOnClickListener { authenticate() }
+            text = "CAMERA PRESENCE + FINGERPRINT"
+            setOnClickListener { startPresenceChallenge() }
         }
 
         status = TextView(this).apply {
@@ -300,4 +300,45 @@ class MainActivity : AppCompatActivity() {
             status.text = "AUTHORITY INITIALIZATION FAILED: ${error.message}"
         }
     }
+
+    private fun startPresenceChallenge() {
+        val workflowId = workflow.text.toString().trim()
+        val actionId = action.text.toString().trim()
+
+        if (workflowId.isBlank() || actionId.isBlank()) {
+            status.text = "HOLD: WORKFLOW AND ACTION REQUIRED"
+            return
+        }
+
+        status.text = "CAMERA PRESENCE CHALLENGE REQUIRED"
+        startActivityForResult(
+            Intent(this, PresenceChallengeActivity::class.java),
+            PRESENCE_REQUEST
+        )
+    }
+
+    @Deprecated("Use Activity Result APIs in a future refactor")
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?
+    ) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == PRESENCE_REQUEST) {
+            if (resultCode == RESULT_OK) {
+                status.text =
+                    "PRESENCE CHALLENGE PASSED. REQUESTING BIOMETRIC AUTHENTICATION."
+                authenticate()
+            } else {
+                status.text =
+                    "HOLD: PRESENCE CHALLENGE NOT COMPLETED. NO AUTHORIZATION."
+            }
+        }
+    }
+
+    companion object {
+        private const val PRESENCE_REQUEST = 7101
+    }
+
 }
