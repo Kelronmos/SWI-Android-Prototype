@@ -1,0 +1,64 @@
+{
+  "report_type": "SWI_DEVICE_SHIELD_PHASE1_ACCEPTANCE",
+  "timestamp_utc": "2026-11-10T23:02:00Z",
+  "repository": "Kelronmos/SWI-Android-Prototype",
+  "branch": "feature/android-device-network-diagnostics",
+  "target_commit": "166891346b73a30dd76ad93007af23bd1ca92977",
+  "previous_head": "fbc7bcdfec17d684a3499a53da79b6234d8c00b0",
+  "version": "0.4.0-launcher-phase1",
+  "environment": {
+    "android_sdk": "NOT_ACCESSIBLE",
+    "gradle": "NOT_ACCESSIBLE",
+    "adb": "NOT_ACCESSIBLE",
+    "physical_device": "NOT_ACCESSIBLE",
+    "emulator": "NOT_TESTED"
+  },
+  "build": {
+    "assembleDebug": "NOT_ACCESSIBLE",
+    "testDebugUnitTest": "NOT_ACCESSIBLE",
+    "lintDebug": "NOT_ACCESSIBLE",
+    "apk_sha256": null,
+    "ci_workflow_updated": true
+  },
+  "source_verification": {
+    "home_registration": "IMPLEMENTED",
+    "single_home_activity": "IMPLEMENTED",
+    "launcher_icon_preserved": "IMPLEMENTED",
+    "app_drawer_packagemanager": "IMPLEMENTED",
+    "search": "IMPLEMENTED",
+    "wallpaper_picker": "IMPLEMENTED",
+    "notification_channels": "IMPLEMENTED",
+    "diagnostics_navigation": "IMPLEMENTED",
+    "governance_footer": "IMPLEMENTED",
+    "existing_modules_preserved": true
+  },
+  "physical_tests": {
+    "L1_L7": "NOT_TESTED",
+    "H1_H8": "NOT_TESTED",
+    "D1_D9": "NOT_TESTED",
+    "S1_S5": "NOT_TESTED",
+    "W1_W5": "NOT_TESTED",
+    "C1_C7": "NOT_TESTED",
+    "N1_N5": "NOT_TESTED",
+    "R1_R8": "NOT_TESTED",
+    "B1_B5": "NOT_TESTED",
+    "G1_G5_source": "PASS"
+  },
+  "security_findings": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 1,
+    "info": 3
+  },
+  "governance": {
+    "PROVEN": "NO",
+    "SEALED": "NO",
+    "PRODUCTION_AUTHORIZED": "NO",
+    "SWI_AUTHORIZED": "NO",
+    "EXECUTION_ALLOWED": "NO"
+  },
+  "phase1_status": "PARTIAL",
+  "phase1_decision": "HOLD",
+  "phase2_authorization": "BLOCKED"
+}

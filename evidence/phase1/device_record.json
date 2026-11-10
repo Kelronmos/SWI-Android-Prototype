@@ -1,0 +1,16 @@
+{
+  "timestamp_utc": "2026-11-10T23:02:00Z",
+  "target_commit": "166891346b73a30dd76ad93007af23bd1ca92977",
+  "adb_available": false,
+  "physical_device_connected": false,
+  "manufacturer": null,
+  "model": null,
+  "android_version": null,
+  "api_level": null,
+  "build_fingerprint": null,
+  "device_id_redacted": null,
+  "apk_installed": null,
+  "apk_matches_commit": null,
+  "result": "NOT_ACCESSIBLE",
+  "note": "No physical device or adb access from this verification environment. User must run Termux/adb checks and append results."
+}
