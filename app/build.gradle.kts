@@ -11,8 +11,8 @@ android {
         applicationId = "com.trustsmotion.swiandroid"
         minSdk = 30
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3.0-device-diagnostics-prototype"
+        versionCode = 4
+        versionName = "0.4.0-launcher-phase1"
     }
 
     compileOptions {
@@ -32,4 +32,5 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.4.2")
     implementation("androidx.camera:camera-view:1.4.2")
     implementation("com.google.mlkit:face-detection:16.1.7")
+    implementation("androidx.core:core-ktx:1.15.0")
 }

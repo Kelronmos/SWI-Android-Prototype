@@ -2,6 +2,10 @@ name: SWI Android Prototype Build
 
 on:
   push:
+    branches:
+      - main
+      - feature/android-device-network-diagnostics
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -42,6 +46,7 @@ jobs:
           test -s app/build/outputs/apk/debug/app-debug.apk
           sha256sum app/build/outputs/apk/debug/app-debug.apk
           file app/build/outputs/apk/debug/app-debug.apk
+          echo "COMMIT_SHA=$(git rev-parse HEAD)"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
