@@ -1,5 +1,8 @@
 package com.trustsmotion.swiandroid
 
+import android.content.Intent
+import android.net.Uri
+
 import android.os.Bundle
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -75,10 +78,44 @@ class MainActivity : AppCompatActivity() {
         layout.addView(workflow)
         layout.addView(action)
         layout.addView(button)
+
         layout.addView(status)
+
+        addLinkButton(
+            layout,
+            "OPEN SWI WEB APP",
+            "https://swi.trustsmotion.com"
+        )
+
+        addLinkButton(
+            layout,
+            "TRUSTS MOTION WEBSITE",
+            "https://www.trustsmotion.com"
+        )
+
+        addLinkButton(
+            layout,
+            "SWI ANDROID REPOSITORY",
+            "https://github.com/Kelronmos/SWI-Android-Prototype"
+        )
 
         setContentView(layout)
         checkBiometrics()
+    }
+
+
+    private fun addLinkButton(
+        layout: LinearLayout,
+        label: String,
+        url: String
+    ) {
+        val button = Button(this).apply {
+            text = label
+            setOnClickListener {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            }
+        }
+        layout.addView(button)
     }
 
     private fun checkBiometrics() {
