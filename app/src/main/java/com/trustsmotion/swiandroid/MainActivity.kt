@@ -2,7 +2,13 @@ package com.trustsmotion.swiandroid
 
 import android.content.Intent
 import android.net.Uri
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.pm.PackageManager
 
+import android.os.Build
 import android.os.Bundle
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -16,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.core.app.NotificationCompat
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.Signature
@@ -81,6 +88,16 @@ class MainActivity : AppCompatActivity() {
 
         layout.addView(status)
 
+
+        layout.addView(Button(this).apply {
+            text = "OPEN SWI RECOVERY SUITE"
+            setOnClickListener {
+                startActivity(
+                    Intent(this@MainActivity, RecoverySuiteActivity::class.java)
+                )
+            }
+        })
+
         addLinkButton(
             layout,
             "OPEN SWI WEB APP",
@@ -101,6 +118,7 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(layout)
         checkBiometrics()
+        checkForAppVersionUpdate()
     }
 
 
@@ -134,6 +152,84 @@ class MainActivity : AppCompatActivity() {
             BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
                 "BIOMETRIC HARDWARE TEMPORARILY UNAVAILABLE"
             else -> "BIOMETRIC STATUS UNKNOWN: $result"
+        }
+    }
+
+    /** Local post-update notice; this is not a remote push service or SWI authorization. */
+    private fun checkForAppVersionUpdate() {
+        val prefs = getSharedPreferences("swi_app_update_notice", MODE_PRIVATE)
+        val currentVersion = packageManager.getPackageInfo(packageName, 0).longVersionCode
+        val previousVersion = prefs.getLong("last_seen_version", 0L)
+        if (previousVersion == 0L) {
+            prefs.edit().putLong("last_seen_version", currentVersion).apply()
+            return
+        }
+        if (currentVersion > previousVersion) {
+            prefs.edit()
+                .putLong("last_seen_version", currentVersion)
+                .putLong("pending_notice_version", currentVersion)
+                .apply()
+        }
+        showPendingVersionNoticeIfAllowed()
+    }
+
+    private fun showPendingVersionNoticeIfAllowed() {
+        val prefs = getSharedPreferences("swi_app_update_notice", MODE_PRIVATE)
+        val pendingVersion = prefs.getLong("pending_notice_version", 0L)
+        if (pendingVersion == 0L) return
+
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            if (prefs.getLong("prompted_permission_for_version", 0L) != pendingVersion) {
+                prefs.edit().putLong("prompted_permission_for_version", pendingVersion).apply()
+                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), UPDATE_NOTIFICATION_PERMISSION)
+            } else {
+                status.text = "SWI APP UPDATE NOTICE PENDING: enable notifications in Android settings to receive it."
+            }
+            return
+        }
+
+        val channelId = "swi_app_updates"
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= 26) {
+            val channel = NotificationChannel(channelId, "SWI app updates", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "Local notices when a newer SWI Android app version is first opened"
+                enableLights(true)
+                lightColor = 0xFFF28C28.toInt()
+            }
+            manager.createNotificationChannel(channel)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val versionName = packageManager.getPackageInfo(packageName, 0).versionName ?: pendingVersion.toString()
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(android.R.drawable.stat_notify_sync_noanim)
+            .setColor(0xFFF28C28.toInt())
+            .setContentTitle("SWI Android updated")
+            .setContentText("Version $versionName is installed. Prototype update does not grant SWI authority.")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(
+                "Version $versionName is installed. This local update notice is not a remote push, verification, seal, or authorization."
+            ))
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+        manager.notify(UPDATE_NOTIFICATION_ID, notification)
+        prefs.edit().remove("pending_notice_version").apply()
+    }
+
+    @Deprecated("Permission callback retained for minSdk 30 compatibility")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == UPDATE_NOTIFICATION_PERMISSION && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+            showPendingVersionNoticeIfAllowed()
         }
     }
 
@@ -339,6 +435,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val PRESENCE_REQUEST = 7101
+        private const val UPDATE_NOTIFICATION_PERMISSION = 7102
+        private const val UPDATE_NOTIFICATION_ID = 512
     }
 
 }

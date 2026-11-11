@@ -20,5 +20,6 @@
                 <category ns0:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+            <activity android:name=".RecoverySuiteActivity" android:exported="false" android:label="SWI Recovery Suite" />
     </application>
 </manifest>
