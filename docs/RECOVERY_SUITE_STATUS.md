@@ -33,6 +33,15 @@ Author: Keletso Ronald Mosidila
 - Two local `SWI_SYSTEM_ERROR_KEY` markdown copies have identical SHA-256 (`5fa4e9508467b1cc727b7d7554fc603e1a2e937982c8dac7a7d4126bf393f881`); this establishes byte equality only, not source authenticity.
 - This is a targeted review of relevant local material, not a complete audit of every download or every account repository. No downloaded archive was extracted or copied into the application.
 
+## Verification and scope record
+
+- Android checkout branch: `feature/joe-alita-assistant-foundation`; final local HEAD after the recovery commits: `96be97f7da9188f5e2f2aaa67302f3e754c688f7`. No upstream is configured for this branch.
+- A local metadata survey found 44 checkouts with a `github.com/Kelronmos` origin URL across 18 distinct origin URLs. This counts local clones/worktrees, not all online account repositories, and is not a source audit of those repositories.
+- `git diff --check` passed for staged changes before commit. Python's XML parser reported the working manifest as well formed; this does not replace Android manifest/resource compilation.
+- `gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` exited 1 before any task ran: `SDK location not found`. `ANDROID_HOME` and `ANDROID_SDK_ROOT` were unset, and no Android SDK was found in the inspected local paths.
+- RecoveryLedger JUnit tests: **NOT RUN**. Android lint: **NOT RUN**. Debug APK build and device/emulator runtime: **NOT RUN**. No APK from these commits was produced.
+- The Recovery Suite test and feature are committed as an unverified incremental change; they are not proven, sealed, or production authorized.
+
 ## Required distinctions
 
 `DETECTED != RECOVERED != VERIFIED`
