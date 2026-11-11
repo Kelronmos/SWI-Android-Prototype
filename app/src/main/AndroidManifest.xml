@@ -5,6 +5,7 @@
     <uses-permission ns0:name="android.permission.USE_BIOMETRIC" />
     <uses-permission ns0:name="android.permission.CAMERA" />
     <uses-feature ns0:name="android.hardware.fingerprint" ns0:required="false" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application ns0:allowBackup="false" ns0:label="SWI" ns0:icon="@drawable/ic_swi" ns0:roundIcon="@drawable/ic_swi" ns0:theme="@style/AppTheme" ns0:supportsRtl="true">
         <activity ns0:name=".PresenceChallengeActivity" ns0:exported="false" ns0:screenOrientation="portrait" />
         <activity ns0:name=".MainActivity" ns0:exported="false" />
