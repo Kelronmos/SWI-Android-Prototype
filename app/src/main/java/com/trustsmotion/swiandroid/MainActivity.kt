@@ -88,6 +88,17 @@ class MainActivity : AppCompatActivity() {
 
         layout.addView(status)
 
+        layout.addView(Button(this).apply {
+            text = "OPEN JOE / ALITA ASSISTANT"
+            setOnClickListener {
+                startActivity(
+                    Intent(
+                        this@MainActivity,
+                        AssistantActivity::class.java
+                    )
+                )
+            }
+        })
 
         layout.addView(Button(this).apply {
             text = "OPEN SWI RECOVERY SUITE"

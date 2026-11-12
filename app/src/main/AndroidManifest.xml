@@ -1,26 +1,26 @@
 <?xml version='1.0' encoding='utf-8'?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:ns0="http://schemas.android.com/apk/res/android">
-    <uses-permission ns0:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission ns0:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission ns0:name="android.permission.USE_BIOMETRIC" />
-    <uses-permission ns0:name="android.permission.CAMERA" />
-    <uses-feature ns0:name="android.hardware.fingerprint" ns0:required="false" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <application ns0:allowBackup="false" ns0:label="SWI" ns0:icon="@drawable/ic_swi" ns0:roundIcon="@drawable/ic_swi" ns0:theme="@style/AppTheme" ns0:supportsRtl="true">
-        <activity ns0:name=".PresenceChallengeActivity" ns0:exported="false" ns0:screenOrientation="portrait" />
-        <activity ns0:name=".MainActivity" ns0:exported="false" />
-        <activity ns0:name=".WelcomeActivity" ns0:exported="true">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.fingerprint" android:required="false" />
+    <application android:allowBackup="false" android:label="SWI" android:icon="@drawable/ic_swi" android:roundIcon="@drawable/ic_swi" android:theme="@style/AppTheme" android:supportsRtl="true">
+        <activity android:name=".PresenceChallengeActivity" android:exported="false" android:screenOrientation="portrait" />
+        <activity android:name=".MainActivity" android:exported="false" />
+        <activity android:name=".WelcomeActivity" android:exported="true">
             <intent-filter>
-                <action ns0:name="android.intent.action.MAIN" />
-                <category ns0:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity ns0:name=".DeviceDiagnosticsActivity" ns0:exported="true" ns0:label="SWI Device Diagnostics" ns0:screenOrientation="portrait">
+        <activity android:name=".DeviceDiagnosticsActivity" android:exported="true" android:label="SWI Device Diagnostics" android:screenOrientation="portrait">
             <intent-filter>
-                <action ns0:name="android.intent.action.MAIN" />
-                <category ns0:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-            <activity android:name=".RecoverySuiteActivity" android:exported="false" android:label="SWI Recovery Suite" />
+    <activity android:name=".AssistantActivity" android:exported="false" android:label="SWI JOE and ALITA" />
+        <activity android:name=".RecoverySuiteActivity" android:exported="false" android:label="SWI Recovery Suite" />
     </application>
-</manifest>
+<uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.POST_NOTIFICATIONS" /><uses-permission android:name="android.permission.INTERNET" /></manifest>
