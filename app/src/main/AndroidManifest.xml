@@ -2,24 +2,24 @@
 
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
 
-    <uses-feature
-        android:name="android.hardware.fingerprint"
-        android:required="false"/>
-    <uses-feature
-        android:name="android.hardware.sensor.proximity"
-        android:required="false"/>
-    <uses-feature
-        android:name="android.hardware.sensor.accelerometer"
-        android:required="false"/>
-    <uses-feature
-        android:name="android.hardware.sensor.gyroscope"
-        android:required="false"/>
-    <uses-feature
-        android:name="android.hardware.sensor.light"
-        android:required="false"/>
-    <uses-feature
-        android:name="android.hardware.touchscreen"
-        android:required="false"/>
+    <!-- Dangerous permissions are requested at runtime only when a feature is activated.
+         RECORD_AUDIO / LOCATION are not requested until those modules are user-initiated. -->
+
+    <uses-feature android:name="android.hardware.fingerprint" android:required="false"/>
+    <uses-feature android:name="android.hardware.sensor.proximity" android:required="false"/>
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false"/>
+    <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false"/>
+    <uses-feature android:name="android.hardware.sensor.light" android:required="false"/>
+    <uses-feature android:name="android.hardware.sensor.barometer" android:required="false"/>
+    <uses-feature android:name="android.hardware.sensor.compass" android:required="false"/>
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
+    <uses-feature android:name="android.hardware.location.gps" android:required="false"/>
+    <uses-feature android:name="android.hardware.wifi" android:required="false"/>
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false"/>
+    <uses-feature android:name="android.hardware.nfc" android:required="false"/>
+    <uses-feature android:name="android.hardware.telephony" android:required="false"/>
 
     <application
         android:allowBackup="false"
