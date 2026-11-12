@@ -73,13 +73,20 @@ class MainActivity : AppCompatActivity() {
             text = "BIOMETRIC STATUS: NOT CHECKED"
         }
 
+        val hardwareBtn = Button(this).apply {
+            text = "OPEN HARDWARE DASHBOARD"
+            setOnClickListener {
+                startActivity(Intent(this@MainActivity, HardwareDashboardActivity::class.java))
+            }
+        }
+
         layout.addView(heading)
         layout.addView(subtitle)
         layout.addView(workflow)
         layout.addView(action)
         layout.addView(button)
-
         layout.addView(status)
+        layout.addView(hardwareBtn)
 
         addLinkButton(
             layout,
