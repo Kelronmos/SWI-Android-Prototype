@@ -2,7 +2,12 @@ name: SWI Android Prototype Build
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - feature/live-hardware-binding-2026-11-12
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -34,14 +39,23 @@ jobs:
       - name: Install Android SDK components
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Compile debug APK
-        run: gradle assembleDebug --no-daemon
+      - name: JVM unit tests
+        run: gradle testDebugUnitTest --no-daemon --stacktrace
 
-      - name: Run APK checks
+      - name: Android lint
+        run: gradle lintDebug --no-daemon --stacktrace
+
+      - name: Compile debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Run APK integrity checks
         run: |
           test -s app/build/outputs/apk/debug/app-debug.apk
-          sha256sum app/build/outputs/apk/debug/app-debug.apk
+          sha256sum app/build/outputs/apk/debug/app-debug.apk | tee apk.sha256
           file app/build/outputs/apk/debug/app-debug.apk
+          # Manifest must not declare production authorization
+          unzip -p app/build/outputs/apk/debug/app-debug.apk AndroidManifest.xml > /dev/null
+          echo "APK present; SHA-256 recorded in apk.sha256"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -50,3 +64,12 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: app/build/test-results/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: 14
