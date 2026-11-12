@@ -20,10 +20,12 @@ import com.trustsmotion.swiandroid.hardware.HardwareInventory
 import com.trustsmotion.swiandroid.hardware.HardwareObservation
 import com.trustsmotion.swiandroid.hardware.ObservationStore
 import com.trustsmotion.swiandroid.hardware.SensorBinder
+import com.trustsmotion.swiandroid.voice.GuidedBreathingSession
+import com.trustsmotion.swiandroid.voice.VoiceVerificationModule
 import java.util.UUID
 
 /**
- * Live hardware dashboard.
+ * Live hardware + voice/breathing dashboard.
  *
  * Observations only. Does not authorize actions.
  * PROVEN=NO SEALED=NO PRODUCTION_AUTHORIZED=NO
@@ -38,6 +40,8 @@ class HardwareDashboardActivity : AppCompatActivity() {
     private lateinit var inventory: HardwareInventory
     private lateinit var store: ObservationStore
     private lateinit var binder: SensorBinder
+    private lateinit var voice: VoiceVerificationModule
+    private lateinit var breathing: GuidedBreathingSession
     private lateinit var statusBoard: TextView
     private lateinit var historyView: TextView
     private lateinit var touchPad: TextView
@@ -65,6 +69,21 @@ class HardwareDashboardActivity : AppCompatActivity() {
             runOnUiThread { refreshBoard() }
         }
 
+        voice = VoiceVerificationModule(this, fp) { obs ->
+            store.add(obs)
+            runOnUiThread { refreshBoard() }
+        }
+        voice.init()
+
+        breathing = GuidedBreathingSession(
+            deviceFingerprint = fp,
+            speak = { line -> voice.speak(line) },
+            onObservation = { obs ->
+                store.add(obs)
+                runOnUiThread { refreshBoard() }
+            }
+        )
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(black)
@@ -84,7 +103,7 @@ class HardwareDashboardActivity : AppCompatActivity() {
         }
 
         statusBoard = TextView(this).apply {
-            textSize = 13f
+            textSize = 12f
             setTextColor(white)
             setTextIsSelectable(true)
         }
@@ -94,7 +113,7 @@ class HardwareDashboardActivity : AppCompatActivity() {
             textSize = 14f
             setTextColor(white)
             setBackgroundColor(Color.rgb(30, 34, 42))
-            setPadding(24, 48, 24, 48)
+            setPadding(24, 40, 24, 40)
             gravity = Gravity.CENTER
             setOnTouchListener { _, event ->
                 recordTouch(event, fp)
@@ -103,38 +122,50 @@ class HardwareDashboardActivity : AppCompatActivity() {
         }
 
         historyView = TextView(this).apply {
-            textSize = 12f
+            textSize = 11f
             setTextColor(Color.rgb(200, 200, 200))
             setTextIsSelectable(true)
         }
 
-        val btnRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-        }
-
-        val discoverBtn = Button(this).apply {
+        val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        btnRow.addView(Button(this).apply {
             text = "DISCOVER"
             setOnClickListener { runDiscovery() }
-        }
-        val exportBtn = Button(this).apply {
+        })
+        btnRow.addView(Button(this).apply {
             text = "EXPORT"
             setOnClickListener { exportEvidence() }
-        }
-        val clearBtn = Button(this).apply {
+        })
+        btnRow.addView(Button(this).apply {
             text = "CLEAR"
             setOnClickListener {
                 store.clear()
                 refreshBoard()
             }
-        }
+        })
 
-        btnRow.addView(discoverBtn)
-        btnRow.addView(exportBtn)
-        btnRow.addView(clearBtn)
+        val voiceRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        voiceRow.addView(Button(this).apply {
+            text = "SPEAK VERIFY"
+            setOnClickListener { voice.speak() }
+        })
+        voiceRow.addView(Button(this).apply {
+            text = "STOP TTS"
+            setOnClickListener { voice.pause() }
+        })
+        voiceRow.addView(Button(this).apply {
+            text = "BREATH START"
+            setOnClickListener { breathing.start() }
+        })
+        voiceRow.addView(Button(this).apply {
+            text = "BREATH STOP"
+            setOnClickListener { breathing.stop() }
+        })
 
         root.addView(title)
         root.addView(subtitle)
         root.addView(btnRow)
+        root.addView(voiceRow)
         root.addView(touchPad)
 
         val scroll = ScrollView(this)
@@ -175,7 +206,6 @@ class HardwareDashboardActivity : AppCompatActivity() {
             MotionEvent.ACTION_CANCEL -> "CANCEL"
             else -> "OTHER_${event.actionMasked}"
         }
-        // Throttle MOVE to reduce noise
         if (action == "MOVE" && event.eventTime % 40 > 5) return
 
         val obs = HardwareObservation(
@@ -188,6 +218,9 @@ class HardwareDashboardActivity : AppCompatActivity() {
             monotonicTimestampNs = SystemClock.elapsedRealtimeNanos(),
             wallClockEpochMs = System.currentTimeMillis(),
             deviceFingerprint = fp,
+            freshness = "LIVE",
+            evidence = "NOT_YET_VERIFIED",
+            authorization = "NOT_AUTHORIZED",
             detail = mapOf(
                 "pointer_count" to event.pointerCount.toString(),
                 "action" to action
@@ -211,14 +244,17 @@ class HardwareDashboardActivity : AppCompatActivity() {
             } else {
                 val bind = obs.effectiveBinding(System.currentTimeMillis())
                 sb.append(
-                    "${type.name}: cap=${obs.capabilityState} bind=$bind\n  ${obs.valueSummary}\n"
+                    "${type.name}: cap=${obs.capabilityState} bind=$bind auth=${obs.authorization}\n  ${obs.valueSummary}\n"
                 )
             }
         }
-        sb.append("\nNON-CLAIMS: observation≠authorization; proven=false; sealed=false; production_authorized=false\n")
+        sb.append(
+            "\nNON-CLAIMS: observation≠authorization; voice_match≠identity; " +
+                "proven=false; sealed=false; production_authorized=false\n"
+        )
         statusBoard.text = sb.toString()
 
-        val hist = store.snapshot().takeLast(12).asReversed()
+        val hist = store.snapshot().takeLast(14).asReversed()
         val hb = StringBuilder("— RECENT —\n")
         for (h in hist) {
             hb.append("[${h.sourceType}] ${h.bindingState} ${h.valueSummary}\n")
@@ -240,6 +276,8 @@ class HardwareDashboardActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         binder.stop()
+        breathing.pause()
+        voice.pause()
         store.add(
             HardwareObservation(
                 observationId = UUID.randomUUID().toString(),
@@ -250,7 +288,8 @@ class HardwareDashboardActivity : AppCompatActivity() {
                 valueSummary = "APP_PAUSED sensors_unregistered",
                 monotonicTimestampNs = SystemClock.elapsedRealtimeNanos(),
                 wallClockEpochMs = System.currentTimeMillis(),
-                deviceFingerprint = inventory.deviceFingerprint()
+                deviceFingerprint = inventory.deviceFingerprint(),
+                authorization = "NOT_AUTHORIZED"
             )
         )
     }
@@ -270,7 +309,8 @@ class HardwareDashboardActivity : AppCompatActivity() {
                 valueSummary = "APP_RESUMED sensors_registered",
                 monotonicTimestampNs = SystemClock.elapsedRealtimeNanos(),
                 wallClockEpochMs = System.currentTimeMillis(),
-                deviceFingerprint = inventory.deviceFingerprint()
+                deviceFingerprint = inventory.deviceFingerprint(),
+                authorization = "NOT_AUTHORIZED"
             )
         )
         refreshBoard()
@@ -279,6 +319,8 @@ class HardwareDashboardActivity : AppCompatActivity() {
     override fun onDestroy() {
         handler.removeCallbacks(staleChecker)
         binder.stop()
+        breathing.stop()
+        voice.shutdown()
         super.onDestroy()
     }
 }
