@@ -144,7 +144,7 @@ class SensorBinder(
         )
     }
 
-    private fun emitAbsent(androidType: Int) Int) {
+    private fun emitAbsent(androidType: Int) {
         val sourceType = watched.first { it.first == androidType }.second
         onObservation(
             HardwareObservation(
