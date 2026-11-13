@@ -1,0 +1,56 @@
+schema: swi-cei-diagnostic/v1
+id: CEI-GRADLE-WRAPPER-001
+name: Gradle Wrapper and Android Build Recovery
+status: documented
+scope:
+  - Termux
+  - Linux
+  - macOS
+  - Windows
+signatures:
+  - id: EMPTY_PROJECT_DIRECTORY
+    match: "does not contain a Gradle build"
+    cause: wrapper_task_outside_project_root
+    severity: error
+    recovery: locate_settings_file_then_generate_wrapper
+  - id: DISTRIBUTION_URL_VALIDATION
+    match: "Test of distribution url"
+    cause: http_head_validation_failure_possible
+    severity: error
+    recovery: diagnose_head_then_optional_no_validate_url
+    caveat: "HEAD failure does not establish GET/download failure"
+  - id: DISTRIBUTION_DOWNLOAD_FAILURE
+    match: "Could not install Gradle distribution"
+    cause: unknown_until_network_tls_download_diagnosis
+    severity: error
+    recovery: inspect_dns_tls_redirect_http_storage
+  - id: AGP_GRADLE_MISMATCH
+    match: "Minimum supported Gradle version"
+    cause: incompatible_gradle_distribution
+    severity: error
+    recovery: consult_official_agp_compatibility_table
+baseline:
+  repository: Kelronmos/SWI-Android-Prototype
+  agp: "8.6.1"
+  gradle: "8.7"
+  java: "17"
+  compile_sdk: 35
+  target_sdk: 35
+safety:
+  automatic_sdk_downgrade: false
+  overwrite_without_backup: false
+  assume_head_failure_means_download_failure: false
+  assume_repair_means_build_success: false
+  unknown_is_false: false
+evidence:
+  required:
+    - repository_commit
+    - operating_system
+    - java_version
+    - installed_gradle_version
+    - agp_version
+    - distribution_url
+    - network_result
+    - build_log
+    - repair_result
+    - apk_sha256_if_generated

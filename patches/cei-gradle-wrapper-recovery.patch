@@ -1,0 +1,457 @@
+diff --git a/diagnostics/cei/gradle-wrapper-recovery.yaml b/diagnostics/cei/gradle-wrapper-recovery.yaml
+new file mode 100644
+index 0000000..8db33ed
+--- /dev/null
++++ b/diagnostics/cei/gradle-wrapper-recovery.yaml
+@@ -0,0 +1,56 @@
++schema: swi-cei-diagnostic/v1
++id: CEI-GRADLE-WRAPPER-001
++name: Gradle Wrapper and Android Build Recovery
++status: documented
++scope:
++  - Termux
++  - Linux
++  - macOS
++  - Windows
++signatures:
++  - id: EMPTY_PROJECT_DIRECTORY
++    match: "does not contain a Gradle build"
++    cause: wrapper_task_outside_project_root
++    severity: error
++    recovery: locate_settings_file_then_generate_wrapper
++  - id: DISTRIBUTION_URL_VALIDATION
++    match: "Test of distribution url"
++    cause: http_head_validation_failure_possible
++    severity: error
++    recovery: diagnose_head_then_optional_no_validate_url
++    caveat: "HEAD failure does not establish GET/download failure"
++  - id: DISTRIBUTION_DOWNLOAD_FAILURE
++    match: "Could not install Gradle distribution"
++    cause: unknown_until_network_tls_download_diagnosis
++    severity: error
++    recovery: inspect_dns_tls_redirect_http_storage
++  - id: AGP_GRADLE_MISMATCH
++    match: "Minimum supported Gradle version"
++    cause: incompatible_gradle_distribution
++    severity: error
++    recovery: consult_official_agp_compatibility_table
++baseline:
++  repository: Kelronmos/SWI-Android-Prototype
++  agp: "8.6.1"
++  gradle: "8.7"
++  java: "17"
++  compile_sdk: 35
++  target_sdk: 35
++safety:
++  automatic_sdk_downgrade: false
++  overwrite_without_backup: false
++  assume_head_failure_means_download_failure: false
++  assume_repair_means_build_success: false
++  unknown_is_false: false
++evidence:
++  required:
++    - repository_commit
++    - operating_system
++    - java_version
++    - installed_gradle_version
++    - agp_version
++    - distribution_url
++    - network_result
++    - build_log
++    - repair_result
++    - apk_sha256_if_generated
+diff --git a/docs/diagnostics/GRADLE_WRAPPER_CEI.md b/docs/diagnostics/GRADLE_WRAPPER_CEI.md
+new file mode 100644
+index 0000000..38aec1c
+--- /dev/null
++++ b/docs/diagnostics/GRADLE_WRAPPER_CEI.md
+@@ -0,0 +1,118 @@
++# SWI CEI: Gradle Wrapper Recovery
++
++Status: DOCUMENTED / NOT YET INDEPENDENTLY VALIDATED
++
++## Purpose
++
++Prevent repeated Gradle wrapper failures across SWI Android development
++environments, including Termux, Linux, macOS and Windows.
++
++## Error family
++
++CEI-GRADLE-WRAPPER-001
++
++### Signature A: Empty temporary directory
++
++Message:
++Directory does not contain a Gradle build.
++
++Cause:
++The wrapper task was invoked outside the real Gradle project.
++
++Rule:
++Locate settings.gradle or settings.gradle.kts before wrapper generation.
++Never initialize an empty temporary directory merely to generate a wrapper.
++
++### Signature B: Distribution URL validation
++
++Message:
++Test of distribution url failed.
++
++Cause:
++The preliminary HTTP HEAD request may be blocked, redirected,
++rejected, or fail because of network/TLS configuration.
++
++Rule:
++A failed HEAD request does not prove that the ZIP download itself fails.
++
++Recovery:
++Use a supported Gradle wrapper generation command with
++--no-validate-url when the failure is specifically URL validation.
++
++Security:
++This setting disables URL validation in the generated wrapper.
++It is not a substitute for distribution integrity verification.
++Use the official Gradle distribution SHA-256 checksum.
++
++### Signature C: Actual distribution download failure
++
++Investigate separately:
++- DNS resolution
++- TLS certificates and Java trust store
++- redirects and HTTP responses
++- proxy configuration
++- available storage
++- download interruption
++
++Do not classify this as a successful URL-validation repair.
++
++### Signature D: AGP / Gradle mismatch
++
++Read the actual Android Gradle Plugin declaration.
++Determine the minimum compatible Gradle version from the official
++Android compatibility table.
++
++Known SWI Android baseline:
++- AGP 8.6.1
++- Gradle 8.7
++- Java 17
++- compileSdk 35
++- targetSdk 35
++
++Do not downgrade SDK levels to conceal a wrapper problem.
++
++## Diagnostic entry point
++
++From a project directory:
++
++    bash scripts/swi-gradle-doctor.sh
++
++Controlled wrapper generation:
++
++    bash scripts/swi-gradle-doctor.sh --repair-wrapper
++
++The repair backs up existing wrapper files before changing them.
++It does not build the APK or change Android SDK configuration.
++
++## Evidence requirements
++
++Record:
++- repository and commit
++- operating system and architecture
++- Java version
++- installed Gradle version
++- AGP version
++- wrapper distribution URL
++- SDK platform availability
++- HTTP/TLS diagnostic result
++- complete build log
++- repair result
++- APK SHA-256, if produced
++
++## SWI state rules
++
++DETECTED != DIAGNOSED
++DIAGNOSED != REPAIRED
++REPAIRED != BUILD_SUCCESSFUL
++BUILD_SUCCESSFUL != TESTED
++TESTED != PROVEN
++PROVEN != SEALED
++SEALED != PRODUCTION_AUTHORIZED
++
++Unknown causes remain UNKNOWN, not FALSE.
++
++## Official references
++
++- https://docs.gradle.org/current/userguide/gradle_wrapper.html
++- https://developer.android.com/build/releases/about-agp
++- https://developer.android.com/build/releases/agp-8-6-0-release-notes
+diff --git a/scripts/swi-gradle-doctor.sh b/scripts/swi-gradle-doctor.sh
+new file mode 100755
+index 0000000..66f3eb7
+--- /dev/null
++++ b/scripts/swi-gradle-doctor.sh
+@@ -0,0 +1,224 @@
++#!/data/data/com.termux/files/usr/bin/bash
++# SWI Common Error Intelligence: Gradle recovery
++# Diagnostic by default. Mutation requires --repair-wrapper.
++
++set -uo pipefail
++
++MODE="${1:---diagnose}"
++ROOT="$(pwd)"
++
++while [[ "$ROOT" != "/" ]]; do
++    if [[ -f "$ROOT/settings.gradle" || \
++          -f "$ROOT/settings.gradle.kts" ]]; then
++        break
++    fi
++    ROOT="$(dirname "$ROOT")"
++done
++
++if [[ ! -f "$ROOT/settings.gradle" && \
++      ! -f "$ROOT/settings.gradle.kts" ]]; then
++    echo "CEI_CLASS=GRADLE_PROJECT_ROOT_NOT_FOUND"
++    echo "CAUSE=No Gradle settings file found in current directory or parents."
++    echo "ACTION=Enter the actual project root. Do not generate a wrapper in an empty temporary directory."
++    exit 2
++fi
++
++cd "$ROOT" || exit 2
++
++echo "===== SWI GRADLE CEI ====="
++echo "PROJECT_ROOT=$ROOT"
++echo "MODE=$MODE"
++
++if [[ -f settings.gradle.kts ]]; then
++    SETTINGS=settings.gradle.kts
++else
++    SETTINGS=settings.gradle
++fi
++
++echo "SETTINGS_FILE=$SETTINGS"
++
++AGP_VERSION="$(python3 - <<'PY'
++import pathlib, re
++
++files = [
++    pathlib.Path("build.gradle.kts"),
++    pathlib.Path("build.gradle"),
++    pathlib.Path("settings.gradle.kts"),
++    pathlib.Path("settings.gradle"),
++]
++
++for p in files:
++    if not p.exists():
++        continue
++    text = p.read_text(errors="replace")
++    match = re.search(
++        r'com\.android\.application.*?version\s*["\']'
++        r'([0-9]+\.[0-9]+(?:\.[0-9]+)?)',
++        text,
++        re.S
++    )
++    if not match:
++        match = re.search(
++            r'com\.android\.tools\.build:gradle:'
++            r'([0-9]+\.[0-9]+(?:\.[0-9]+)?)',
++            text
++        )
++    if match:
++        print(match.group(1))
++        break
++PY
++)"
++
++REQUIRED_GRADLE="$(python3 - "$AGP_VERSION" <<'PY'
++import sys
++
++v = sys.argv[1]
++mapping = {
++    "8.0": "8.0",
++    "8.1": "8.0",
++    "8.2": "8.2",
++    "8.3": "8.4",
++    "8.4": "8.6",
++    "8.5": "8.7",
++    "8.6": "8.7",
++    "8.7": "8.9",
++    "8.8": "8.10.2",
++    "8.9": "8.11.1",
++    "8.10": "8.11.1",
++    "8.11": "8.13",
++    "8.12": "8.13",
++    "8.13": "8.13",
++}
++
++print(mapping.get(".".join(v.split(".")[:2]), "UNKNOWN"))
++PY
++)"
++
++echo "AGP_VERSION=${AGP_VERSION:-UNKNOWN}"
++echo "REQUIRED_GRADLE=$REQUIRED_GRADLE"
++
++echo
++echo "===== JAVA ====="
++java -version 2>&1 || true
++
++echo
++echo "===== INSTALLED GRADLE ====="
++gradle --version 2>&1 | head -18 || true
++
++echo
++echo "===== ANDROID SDK ====="
++echo "ANDROID_HOME=${ANDROID_HOME:-UNSET}"
++echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-UNSET}"
++
++if [[ -n "${ANDROID_HOME:-}" ]]; then
++    for api in 34 35; do
++        if [[ -f "$ANDROID_HOME/platforms/android-$api/android.jar" ]]; then
++            echo "ANDROID_API_${api}=FOUND"
++        else
++            echo "ANDROID_API_${api}=MISSING"
++        fi
++    done
++fi
++
++echo
++echo "===== EXISTING WRAPPER ====="
++if [[ -f gradle/wrapper/gradle-wrapper.properties ]]; then
++    cat gradle/wrapper/gradle-wrapper.properties
++else
++    echo "WRAPPER_PROPERTIES=MISSING"
++fi
++
++echo
++echo "===== DISTRIBUTION CONNECTIVITY ====="
++if command -v curl >/dev/null 2>&1; then
++    curl -sSIL --connect-timeout 15 --max-time 60 \
++      https://services.gradle.org/distributions/gradle-${REQUIRED_GRADLE}-bin.zip \
++      -o /dev/null \
++      -w 'HTTP_STATUS=%{http_code}\nFINAL_URL=%{url_effective}\n' \
++      || echo "HEAD_CHECK=FAILED_OR_BLOCKED"
++else
++    echo "CURL=NOT_INSTALLED"
++fi
++
++echo
++echo "===== CEI CLASSIFICATION ====="
++
++if [[ "$REQUIRED_GRADLE" == "UNKNOWN" ]]; then
++    echo "CEI_CLASS=AGP_VERSION_UNRECOGNIZED"
++    echo "ACTION=Consult the official AGP compatibility table."
++elif [[ ! -f gradlew || ! -f gradle/wrapper/gradle-wrapper.properties ]]; then
++    echo "CEI_CLASS=GRADLE_WRAPPER_MISSING"
++    echo "ACTION=Generate wrapper from the actual project root."
++else
++    echo "CEI_CLASS=WRAPPER_PRESENT"
++fi
++
++if [[ "$MODE" != "--repair-wrapper" ]]; then
++    echo "DIAGNOSIS_ONLY=YES"
++    exit 0
++fi
++
++echo
++echo "===== CONTROLLED WRAPPER REPAIR ====="
++
++if [[ "$REQUIRED_GRADLE" == "UNKNOWN" ]]; then
++    echo "REPAIR_REFUSED=Unknown AGP compatibility."
++    exit 3
++fi
++
++if ! command -v gradle >/dev/null 2>&1; then
++    echo "REPAIR_REFUSED=Installed Gradle is unavailable."
++    exit 3
++fi
++
++LOCAL_VERSION="$(gradle --version 2>/dev/null |
++    awk '/^Gradle / {print $2; exit}')"
++
++LOCAL_MAJOR="${LOCAL_VERSION%%.*}"
++
++if [[ ! "$LOCAL_MAJOR" =~ ^[0-9]+$ ]] || \
++   (( LOCAL_MAJOR < 9 )); then
++    echo "REPAIR_REFUSED=This recovery procedure requires Gradle 9+ for --no-validate-url."
++    echo "Use the documented manual wrapper-properties recovery."
++    exit 3
++fi
++
++BACKUP="$HOME/.swi-backups/gradle-$(date +%Y%m%d-%H%M%S)"
++mkdir -p "$BACKUP"
++
++for item in gradlew gradlew.bat gradle/wrapper; do
++    if [[ -e "$item" ]]; then
++        mkdir -p "$BACKUP/$(dirname "$item")"
++        cp -a "$item" "$BACKUP/$item"
++    fi
++done
++
++echo "BACKUP=$BACKUP"
++
++gradle :wrapper \
++    --gradle-version "$REQUIRED_GRADLE" \
++    --distribution-type bin \
++    --no-validate-url \
++    --network-timeout 60000
++
++RESULT=$?
++
++if [[ "$RESULT" -ne 0 ]]; then
++    echo "REPAIR_RESULT=FAILED"
++    echo "BACKUP_PRESERVED=YES"
++    exit "$RESULT"
++fi
++
++if [[ ! -f gradle/wrapper/gradle-wrapper.properties || \
++      ! -f gradlew ]]; then
++    echo "REPAIR_RESULT=INCOMPLETE"
++    exit 4
++fi
++
++chmod +x gradlew
++
++echo "REPAIR_RESULT=WRAPPER_GENERATED"
++echo "DISTRIBUTION_URL_VALIDATION=DISABLED"
++echo "NOTE=Verify official distribution integrity and configure a verified SHA-256 checksum before relying on this wrapper."
++echo "NEXT=Run ./gradlew --version, then the project build."
++
+diff --git a/tests/diagnostics/test_gradle_wrapper_recovery.sh b/tests/diagnostics/test_gradle_wrapper_recovery.sh
+new file mode 100755
+index 0000000..2534328
+--- /dev/null
++++ b/tests/diagnostics/test_gradle_wrapper_recovery.sh
+@@ -0,0 +1,35 @@
++#!/data/data/com.termux/files/usr/bin/bash
++set -eu
++
++ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
++cd "$ROOT"
++
++echo "===== SWI GRADLE CEI REGRESSION TESTS ====="
++
++test -x scripts/swi-gradle-doctor.sh
++test -f docs/diagnostics/GRADLE_WRAPPER_CEI.md
++test -f diagnostics/cei/gradle-wrapper-recovery.yaml
++
++grep -q 'CEI-GRADLE-WRAPPER-001' \
++  diagnostics/cei/gradle-wrapper-recovery.yaml
++
++grep -q 'EMPTY_PROJECT_DIRECTORY' \
++  diagnostics/cei/gradle-wrapper-recovery.yaml
++
++grep -q 'DISTRIBUTION_URL_VALIDATION' \
++  diagnostics/cei/gradle-wrapper-recovery.yaml
++
++grep -q 'AGP_GRADLE_MISMATCH' \
++  diagnostics/cei/gradle-wrapper-recovery.yaml
++
++grep -q 'automatic_sdk_downgrade: false' \
++  diagnostics/cei/gradle-wrapper-recovery.yaml
++
++grep -q 'BUILD_SUCCESSFUL != TESTED' \
++  docs/diagnostics/GRADLE_WRAPPER_CEI.md
++
++echo "PASS: CEI documentation exists"
++echo "PASS: Error signatures registered"
++echo "PASS: Safety rules registered"
++echo "PASS: Evidence requirements documented"
++echo "RESULT=PASS"

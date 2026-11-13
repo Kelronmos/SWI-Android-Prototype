@@ -1,6 +1,7 @@
 package com.trustsmotion.swiandroid.navigation
 
 import android.app.Activity
+import androidx.activity.ComponentActivity
 import android.content.Intent
 import android.view.Gravity
 import android.widget.Button
@@ -24,7 +25,12 @@ object SwiNavigation {
             text = "← BACK"
             setOnClickListener {
                 if (!activity.isFinishing) {
-                    activity.onBackPressedDispatcher.onBackPressed()
+                    if (activity is ComponentActivity) {
+                        activity.onBackPressedDispatcher.onBackPressed()
+                    } else {
+                        @Suppress("DEPRECATION")
+                        activity.onBackPressed()
+                    }
                 }
             }
         }, LinearLayout.LayoutParams(0, -2, 1f))
